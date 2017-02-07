@@ -55,12 +55,12 @@ with open('pairs.txt', 'r') as f:
             #net.blobs['data'].data[0] = transformer.preprocess('data', caffe.io.load_image(name1,color=False))
             net.blobs['data'].data[0] = transformer.preprocess('data', caffe.io.load_image(name1))
             out = net.forward()                  
-            x1 = net.blobs[layer].data[0]
+            x1 = net.blobs[layer].data[0].copy()
             print "shape of x1: ",x1.shape
 
             net.blobs['data'].data[0] = transformer.preprocess('data', caffe.io.load_image(name2))
             out = net.forward()   
-            x2 = net.blobs[layer].data[0]
+            x2 = net.blobs[layer].data[0].copy()
 
             x = np.append(x1,x2)
             print "shape of x: ",x.shape
@@ -75,11 +75,11 @@ with open('pairs.txt', 'r') as f:
 
             net.blobs['data'].data[0] = transformer.preprocess('data', caffe.io.load_image(name1))
             out = net.forward()                  
-            x1 = net.blobs[layer].data[0]
+            x1 = net.blobs[layer].data[0].copy()
 
             net.blobs['data'].data[0] = transformer.preprocess('data', caffe.io.load_image(name2))
             out = net.forward()   
-            x2 = net.blobs[layer].data[0]
+            x2 = net.blobs[layer].data[0].copy()
 
             x = np.append(x1,x2)
             print "shape of x: ",x.shape
