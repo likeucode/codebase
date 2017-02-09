@@ -10,36 +10,35 @@ import numpy as np
 import sys
 import cPickle as pickle
 
-
 caffe_root = '/home/ke/caffe/caffe-center-loss/caffe-master/'  
 model_path = './model/'  
 sys.path.insert(0, caffe_root + 'python')
 
-# caffe.set_device(0)
-# caffe.set_mode_gpu()
+caffe.set_device(0)
+caffe.set_mode_gpu()
 
-caffe.set_mode_cpu()
+#caffe.set_mode_cpu()
 
-net = caffe.Net(model_path + 'resnet50_face_deploy.prototxt',
-                model_path + 'resnet_50_face_iter_900000.caffemodel',
+net = caffe.Net(model_path + 'ResNet-101-deploy_augmentation.prototxt',
+                model_path + 'snap_resnet__iter_120000.caffemodel',
                 caffe.TEST)
 
 #for layer_name,blob in net.blobs.iteritems():
 #    print layer_name + '\t' + str(blob.data.shape)
-mean_face=np.load(model_path + 'db_mean_face.npy')
+mean_face=np.load(model_path + 'resnet101_face_mean.npy')
 mean_face=mean_face.mean(1).mean(1)
 transformer = caffe.io.Transformer({'data': net.blobs['data'].data.shape})
 transformer.set_transpose('data', (2,0,1))   # height*width*channel -> channel*height*width
 transformer.set_mean('data', mean_face) # mean pixel
 transformer.set_raw_scale('data',255)  # the reference model operates on images in [0,255] range instead of [0,1]
 transformer.set_channel_swap('data', (2,1,0))  # swap channels from RGB to BGR
-transformer.set_input_scale('data',0.00390625)
+# transformer.set_input_scale('data',0.00390625)
 net.blobs['data'].reshape(1,3,224,224)
 
-layer='pool2' #the layer which we need extract feature from
+layer='pool5' #the layer which we need extract feature from
 
-f1 = open('match_pair_resnet50.txt','w')
-f2 = open('dismatch_pair_resnet50.txt','w')
+f1 = open('match_pair_resnet101_new.txt','w')
+f2 = open('dismatch_pair_resnet101_new.txt','w')
 count=0
 with open('pairs.txt', 'r') as f:
     for line in f.readlines():
@@ -49,42 +48,44 @@ with open('pairs.txt', 'r') as f:
 
         if len(pair) == 3:
             print pair
-            name1 = "lfw-deepfunneled/{}/{}_{}.jpg".format(pair[0], pair[0], pair[1].zfill(4))
-            name2 = "lfw-deepfunneled/{}/{}_{}.jpg".format(pair[0], pair[0], pair[2].zfill(4))
+            name1 = "Face/{}/{}_{}.jpg".format(pair[0], pair[0], pair[1].zfill(4))
+            name2 = "Face/{}/{}_{}.jpg".format(pair[0], pair[0], pair[2].zfill(4))
 
             #net.blobs['data'].data[0] = transformer.preprocess('data', caffe.io.load_image(name1,color=False))
             net.blobs['data'].data[0] = transformer.preprocess('data', caffe.io.load_image(name1))
             out = net.forward()                  
             x1 = net.blobs[layer].data[0].copy()
-            print "shape of x1: ",x1.shape
 
             net.blobs['data'].data[0] = transformer.preprocess('data', caffe.io.load_image(name2))
             out = net.forward()   
             x2 = net.blobs[layer].data[0].copy()
-
-            x = np.append(x1,x2)
-            print "shape of x: ",x.shape
-            for i in range(len(x)):
-                f1.write('%.3f ' % x[i])
+            
+            #x = np.append(x1,x2)
+            print "shape of x1: ",x1.shape
+            for i in range(len(x1)):
+                f1.write('%.3f ' % x1[i,0,0])
+            for i in range(len(x2)):
+                f1.write('%.3f ' % x2[i,0,0])
             f1.write('\n')
 
         if len(pair) == 4:
             print pair
-            name1 = "lfw-deepfunneled/{}/{}_{}.jpg".format(pair[0], pair[0], pair[1].zfill(4))
-            name2 = "lfw-deepfunneled/{}/{}_{}.jpg".format(pair[2], pair[2], pair[3].zfill(4))
+            name1 = "Face/{}/{}_{}.jpg".format(pair[0], pair[0], pair[1].zfill(4))
+            name2 = "Face/{}/{}_{}.jpg".format(pair[2], pair[2], pair[3].zfill(4))
 
             net.blobs['data'].data[0] = transformer.preprocess('data', caffe.io.load_image(name1))
             out = net.forward()                  
-            x1 = net.blobs[layer].data[0].copy()
-
+            x3 = net.blobs[layer].data[0].copy()
+            
             net.blobs['data'].data[0] = transformer.preprocess('data', caffe.io.load_image(name2))
             out = net.forward()   
-            x2 = net.blobs[layer].data[0].copy()
+            x4 = net.blobs[layer].data[0].copy()
+            #x = np.append(x1,x2)
 
-            x = np.append(x1,x2)
-            print "shape of x: ",x.shape
-            for i in range(len(x)):
-                f2.write('%.3f ' % x[i])
+            for i in range(len(x3)):
+                f2.write('%.3f ' % x3[i,0,0])
+            for i in range(len(x4)):
+                f2.write('%.3f ' % x4[i,0,0])
             f2.write('\n')
 for layer_name,blob in net.blobs.iteritems():
     print layer_name + '\t' + str(blob.data.shape)
